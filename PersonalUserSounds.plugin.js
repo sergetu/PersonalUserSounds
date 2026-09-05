@@ -89,14 +89,31 @@
     var PUSS_MODES = ["inherit", "default", "custom", "silent"];
 
     function detectLocale() {
+        // 1) Discord's own UI locale: Discord sets <html lang> to the selected
+        //    interface language (ru / en-US / de / ...). navigator.language is
+        //    NOT reliable here — Electron keeps en-US even when Discord is Russian.
         try {
-            if (typeof BdApi !== "undefined" && BdApi && BdApi.LocaleManager && typeof BdApi.LocaleManager.getLocale === "function") {
-                var l = BdApi.LocaleManager.getLocale();
-                if (String(l).toLowerCase().indexOf("ru") === 0) return "ru";
-                return "en";
+            var doc = typeof document !== "undefined" ? document : null;
+            var htmlLang = doc && doc.documentElement && doc.documentElement.getAttribute
+                ? doc.documentElement.getAttribute("lang") : null;
+            if (htmlLang) {
+                var h = String(htmlLang).toLowerCase();
+                if (h.indexOf("ru") === 0) return "ru";
+                if (h.indexOf("en") === 0) return "en";
             }
         }
         catch (_) { /* fall through */ }
+        // 2) BetterDiscord locale manager, when the API provides it
+        try {
+            if (typeof BdApi !== "undefined" && BdApi && BdApi.LocaleManager && typeof BdApi.LocaleManager.getLocale === "function") {
+                var l = BdApi.LocaleManager.getLocale();
+                var lc = String(l).toLowerCase();
+                if (lc.indexOf("ru") === 0) return "ru";
+                if (lc.indexOf("en") === 0) return "en";
+            }
+        }
+        catch (_) { /* fall through */ }
+        // 3) last resort: browser language
         var lang = (typeof navigator !== "undefined" && navigator && navigator.language) || "en";
         return String(lang).toLowerCase().indexOf("ru") === 0 ? "ru" : "en";
     }
