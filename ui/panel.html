@@ -77,7 +77,6 @@
     letter-spacing: .02em; color: var(--text-muted, #949ba4); margin: 0 0 12px;
     display: flex; align-items: center; gap: 8px;
 }
-.puss-hint { color: var(--text-muted, #949ba4); font-size: 12px; margin: -6px 0 12px; }
 
 /* ===== Rows & fields ===== */
 .puss-row {
@@ -271,16 +270,6 @@
 .puss-mode-btn:hover { border-color: var(--interactive-normal, #b5bac1); color: var(--interactive-normal, #b5bac1); }
 .puss-mode-btn.active { border-color: var(--interactive-active, #f2f3f5); color: var(--interactive-active, #f2f3f5); }
 .puss-mode-btn:focus-visible { outline: 2px solid var(--brand-experiment, #5865f2); outline-offset: 1px; }
-
-/* Inline mode reference inside the user modal (always visible, compact) */
-.puss-mode-help {
-    display: grid; gap: 2px; margin: 0 0 12px; padding: 8px 10px;
-    border: 1px solid var(--background-modifier-accent, rgba(255,255,255,.06));
-    border-radius: 6px; background: var(--puss-card-bg, transparent);
-}
-.puss-mode-help-row { display: flex; gap: 8px; align-items: baseline; font-size: 12px; line-height: 1.45; min-width: 0; }
-.puss-mode-help-name { flex: 0 0 76px; font-weight: 600; color: var(--header-primary, #f2f3f5); }
-.puss-mode-help-desc { color: var(--text-muted, #949ba4); min-width: 0; }
 
 /* File path row: readonly path with ellipsis + "choose file" button beside it */
 .puss-path-row { display: flex; gap: 6px; align-items: center; }
@@ -506,8 +495,6 @@ body.puss-preview-body .puss-panel-frame {
         </div>
         <button type="button" class="puss-btn-help" data-action="open-help" data-i18n-title="help">?</button>
     </div>
-    <p class="puss-hint" data-role="intro"></p>
-    <div class="puss-mode-help" data-role="mode-help"></div>
     <div class="puss-event-list" data-role="events"></div>
 </div>
 </template>
@@ -563,7 +550,6 @@ body.puss-preview-body .puss-panel-frame {
         en: {
             personalSounds: "Personal sounds", configure: "Configure personal sounds", help: "Help",
             modeHelpTitle: "Sound modes",
-            modeHelpIntro: "Each event can use its own mode. The mode decides what happens when that user's event is detected.",
             inheritDescription: "Use the global setting for this event from the plugin settings.",
             defaultDescription: "Keep Discord's standard sound and do not play a personal sound.",
             customDescription: "Mute Discord's standard sound when possible and play the selected local audio file.",
@@ -593,7 +579,6 @@ body.puss-preview-body .puss-panel-frame {
         ru: {
             personalSounds: "Персональные звуки", configure: "Настроить персональные звуки", help: "Справка",
             modeHelpTitle: "Режимы звука",
-            modeHelpIntro: "У каждого события может быть свой режим. Режим определяет, что произойдёт, когда плагин заметит событие этого пользователя.",
             inheritDescription: "Использовать глобальную настройку этого события из настроек плагина.",
             defaultDescription: "Оставить стандартный звук Discord и не проигрывать персональный звук.",
             customDescription: "По возможности заглушить стандартный звук Discord и проиграть выбранный локальный аудиофайл.",
@@ -1235,25 +1220,6 @@ body.puss-preview-body .puss-panel-frame {
         if (usernameEl) usernameEl.textContent = payload.username || "";
         var idEl = body.querySelector('[data-role="id"]');
         if (idEl) idEl.textContent = payload.userId;
-        var intro = body.querySelector('[data-role="intro"]');
-        if (intro) intro.textContent = this.text("modeHelpIntro");
-        var modeHelp = body.querySelector('[data-role="mode-help"]');
-        if (modeHelp) {
-            var keys = [["inherit", "inheritDescription"], ["default", "defaultDescription"], ["custom", "customDescription"], ["silent", "silentDescription"]];
-            for (var h = 0; h < keys.length; h++) {
-                var rowEl = document.createElement("div");
-                rowEl.className = "puss-mode-help-row";
-                var nameEl = document.createElement("span");
-                nameEl.className = "puss-mode-help-name";
-                nameEl.textContent = this.text(keys[h][0]);
-                var descEl = document.createElement("span");
-                descEl.className = "puss-mode-help-desc";
-                descEl.textContent = this.text(keys[h][1]);
-                rowEl.appendChild(nameEl);
-                rowEl.appendChild(descEl);
-                modeHelp.appendChild(rowEl);
-            }
-        }
         var eventsBox = body.querySelector('[data-role="events"]');
         if (eventsBox) {
             for (var e = 0; e < PUSS_EVENTS.length; e++) {
