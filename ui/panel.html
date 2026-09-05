@@ -257,11 +257,27 @@
     cursor: pointer; font-weight: 700; flex: 0 0 auto; line-height: 1;
 }
 .puss-btn-help:hover { color: var(--interactive-hover, #dbdee1); }
-.puss-mode-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 14px; }
-.puss-chip {
-    padding: 3px 8px; border-radius: 4px; background: var(--background-secondary, #2b2d31);
-    color: var(--text-muted, #949ba4); font-size: 12px;
+
+/* Mode selector: four outline buttons. Active mode = white text, inactive = grey.
+   Kept quiet: outline only, no fill. */
+.puss-mode-btns { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 4px; }
+.puss-mode-btn {
+    padding: 4px 10px; font-size: 12px; border-radius: 4px; cursor: pointer;
+    background: transparent; line-height: 1.4;
+    border: 1px solid var(--background-modifier-accent, rgba(255,255,255,.08));
+    color: var(--text-muted, #949ba4);
+    transition: border-color .12s ease, color .12s ease;
 }
+.puss-mode-btn:hover { border-color: var(--interactive-normal, #b5bac1); color: var(--interactive-normal, #b5bac1); }
+.puss-mode-btn.active { border-color: var(--interactive-active, #f2f3f5); color: var(--interactive-active, #f2f3f5); }
+.puss-mode-btn:focus-visible { outline: 2px solid var(--brand-experiment, #5865f2); outline-offset: 1px; }
+
+/* File path row: readonly path with ellipsis + "choose file" button beside it */
+.puss-path-row { display: flex; gap: 6px; align-items: center; }
+.puss-path-row .puss-input { flex: 1 1 auto; min-width: 0; }
+.puss-path-row .puss-btn { flex: 0 0 auto; white-space: nowrap; }
+.puss-input[readonly] { cursor: default; text-overflow: ellipsis; }
+.puss-input[readonly]:focus { border-color: transparent; }
 
 /* info rows (help / diagnostics / compatibility) */
 .puss-diag-table { display: grid; gap: 4px; }
@@ -420,18 +436,21 @@ body.puss-preview-body .puss-panel-frame {
         <div class="puss-field-head">
             <span class="puss-field-label" data-i18n="mode"></span>
         </div>
-        <select class="puss-select" data-field="mode" data-action="select-field">
-            <option value="inherit" data-i18n="inherit"></option>
-            <option value="default" data-i18n="default"></option>
-            <option value="custom" data-i18n="custom"></option>
-            <option value="silent" data-i18n="silent"></option>
-        </select>
+        <div class="puss-mode-btns" data-role="mode-btns">
+            <button type="button" class="puss-mode-btn" data-action="set-mode" data-mode="inherit"><span data-i18n="inherit"></span></button>
+            <button type="button" class="puss-mode-btn" data-action="set-mode" data-mode="default"><span data-i18n="default"></span></button>
+            <button type="button" class="puss-mode-btn" data-action="set-mode" data-mode="custom"><span data-i18n="custom"></span></button>
+            <button type="button" class="puss-mode-btn" data-action="set-mode" data-mode="silent"><span data-i18n="silent"></span></button>
+        </div>
     </div>
     <div class="puss-field">
         <div class="puss-field-head">
             <span class="puss-field-label" data-i18n="filePath"></span>
         </div>
-        <input type="text" class="puss-input" data-field="path" data-action="path-field" placeholder="C:\path\sound.mp3" spellcheck="false">
+        <div class="puss-path-row">
+            <input type="text" class="puss-input" data-field="path" data-action="path-field" placeholder="C:\path\sound.mp3" spellcheck="false" readonly>
+            <button type="button" class="puss-btn puss-btn-secondary" data-action="choose"><span data-i18n="chooseFile"></span></button>
+        </div>
     </div>
     <div class="puss-field">
         <div class="puss-field-head">
@@ -441,7 +460,6 @@ body.puss-preview-body .puss-panel-frame {
         <input type="range" class="puss-range" min="0" max="100" step="1" data-field="volume" data-action="range-field">
     </div>
     <div class="puss-btn-row">
-        <button type="button" class="puss-btn puss-btn-secondary puss-btn-sm" data-action="choose"><span data-i18n="chooseFile"></span></button>
         <button type="button" class="puss-btn puss-btn-secondary puss-btn-sm" data-action="preview"><span data-i18n="preview"></span></button>
         <button type="button" class="puss-btn puss-btn-secondary puss-btn-sm" data-action="diagnose"><span data-i18n="diagnostics"></span></button>
         <button type="button" class="puss-btn puss-btn-secondary puss-btn-sm" data-action="stop"><span data-i18n="stop"></span></button>
@@ -479,7 +497,6 @@ body.puss-preview-body .puss-panel-frame {
         <button type="button" class="puss-btn-help" data-action="open-help" data-i18n-title="help">?</button>
     </div>
     <p class="puss-hint" data-role="intro"></p>
-    <div class="puss-mode-chips" data-role="chips"></div>
     <div class="puss-event-list" data-role="events"></div>
 </div>
 </template>
@@ -857,16 +874,18 @@ body.puss-preview-body .puss-panel-frame {
         rootEl.setAttribute("data-event", eventType);
         var title = card.querySelector(".puss-card-title");
         if (title) title.textContent = this.text(eventType);
-        var modeSelect = card.querySelector('[data-field="mode"]');
-        if (modeSelect) {
-            modeSelect.value = config.mode || (opts.allowInherit ? "inherit" : "default");
-            if (!opts.allowInherit) {
-                var inheritOption = modeSelect.querySelector('option[value="inherit"]');
-                if (inheritOption) inheritOption.remove();
-            }
+        var modeBtns = card.querySelectorAll('.puss-mode-btn');
+        var mode = config.mode || (opts.allowInherit ? "inherit" : "default");
+        for (var bi = 0; bi < modeBtns.length; bi++) {
+            var b = modeBtns[bi];
+            if (!opts.allowInherit && b.getAttribute("data-mode") === "inherit") b.style.display = "none";
+            if (b.getAttribute("data-mode") === mode) b.classList.add("active");
         }
         var pathInput = card.querySelector('[data-field="path"]');
-        if (pathInput) pathInput.value = config.path || "";
+        if (pathInput) {
+            pathInput.value = config.path || "";
+            if (config.path) pathInput.title = config.path;
+        }
         var volumeRange = card.querySelector('[data-field="volume"]');
         var volumeLabel = card.querySelector('[data-field="volume-label"]');
         var volume = clampNum(config.volume == null ? 1 : config.volume, 0, 1);
@@ -876,6 +895,15 @@ body.puss-preview-body .puss-panel-frame {
         }
         if (volumeLabel) volumeLabel.textContent = Math.round(volume * 100) + "%";
         return card;
+    };
+
+    /* reflect the active mode on the card's mode buttons */
+    PussUI.prototype.syncModeButtons = function (card, mode) {
+        if (!card) return;
+        var btns = card.querySelectorAll(".puss-mode-btn");
+        for (var i = 0; i < btns.length; i++) {
+            btns[i].classList.toggle("active", btns[i].getAttribute("data-mode") === mode);
+        }
     };
 
     /* ---------- panel event delegation ---------- */
@@ -1060,6 +1088,20 @@ body.puss-preview-body .puss-panel-frame {
             }
             this.rerenderUsers();
         }
+        else if (action === "set-mode") {
+            var cardM = el.closest("[data-event]");
+            if (!cardM) return;
+            var scopeM = this.scopeOf(el);
+            var modeValue = el.getAttribute("data-mode");
+            var configM = this.configFor(cardM, scopeM);
+            if (!configM) return;
+            configM.mode = modeValue;
+            this.syncModeButtons(cardM, modeValue);
+            if (scopeM === "panel-defaults") {
+                setPath(this.panelSettings, "defaults." + cardM.getAttribute("data-event") + ".mode", modeValue);
+                this.commitPanel();
+            }
+        }
         else if (action === "choose") {
             var card = el.closest("[data-event]");
             if (!card) return;
@@ -1073,9 +1115,11 @@ body.puss-preview-body .puss-panel-frame {
                 config.path = picked.path || null;
                 config.source = picked.source || null;
                 var pathInput = card.querySelector('[data-field="path"]');
-                if (pathInput) pathInput.value = config.path || "";
-                var modeSelect = card.querySelector('[data-field="mode"]');
-                if (modeSelect) modeSelect.value = "custom";
+                if (pathInput) {
+                    pathInput.value = config.path || "";
+                    pathInput.title = config.path || "";
+                }
+                self.syncModeButtons(card, "custom");
                 if (scope === "panel-defaults") {
                     self.commitPanel();
                 }
@@ -1105,7 +1149,10 @@ body.puss-preview-body .puss-panel-frame {
             configC.path = null;
             configC.source = null;
             var pathInputC = cardC.querySelector('[data-field="path"]');
-            if (pathInputC) pathInputC.value = "";
+            if (pathInputC) {
+                pathInputC.value = "";
+                pathInputC.title = "";
+            }
             if (scopeC === "panel-defaults") this.commitPanel();
         }
     };
@@ -1162,15 +1209,6 @@ body.puss-preview-body .puss-panel-frame {
         if (idEl) idEl.textContent = payload.userId;
         var intro = body.querySelector('[data-role="intro"]');
         if (intro) intro.textContent = this.text("modeHelpIntro");
-        var chips = body.querySelector('[data-role="chips"]');
-        if (chips) {
-            for (var m = 0; m < PUSS_MODES.length; m++) {
-                var chip = document.createElement("span");
-                chip.className = "puss-chip";
-                chip.textContent = this.text(PUSS_MODES[m]);
-                chips.appendChild(chip);
-            }
-        }
         var eventsBox = body.querySelector('[data-role="events"]');
         if (eventsBox) {
             for (var e = 0; e < PUSS_EVENTS.length; e++) {
@@ -1261,6 +1299,7 @@ body.puss-preview-body .puss-panel-frame {
             var action = el.getAttribute("data-action");
             if (action === "open-help") self.openHelp();
             else if (action === "close-modal") self.closeTopModal();
+            else self.panelClick(el); // choose/preview/diagnose/stop/clear/set-mode on event cards
         });
         root.addEventListener("input", function (event) {
             var el = event.target && event.target.closest ? event.target.closest("[data-action]") : null;
